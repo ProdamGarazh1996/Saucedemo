@@ -1,30 +1,53 @@
+from operator import attrgetter
+
 import allure
 import pytest
 
-from models.models import CartItemData
-from pages.cart_page import CartPage
-from pages.login_page import LoginPage
+from data.test_data import Products
+from models.models import Product
 from pages.main_page import MainPage
+from steps.cart_steps import CartSteps
 
 
-@allure.title("Тестирование товара в корзине")
-@allure.description("Тестирование товара в корзине")
-@pytest.mark.regression
-def test_cart(browser):
-    login_page = LoginPage(browser)
-    main_page = MainPage(browser)
-    cart_page = CartPage(browser)
-    login_page.open("https://www.saucedemo.com/")
-    login_page.login("standard_user", "secret_sauce")
-    login_page.wait_until_document_loaded()
-    first_item = main_page.find_element(cart_page._INVENTORY_ITEM)
-    cart_item_data = CartItemData(
-        name=first_item.find_element(*cart_page._INVENTORY_ITEM_NAME).text,
-        description=first_item.find_element(
-            *cart_page._INVENTORY_ITEM_DESC).text,
-        price=first_item.find_element(*cart_page._INVENTORY_ITEM_PRICE).text
-    )
+@allure.epic("SauceDemo")
+@allure.feature("Корзина")
+class TestCart:
 
-    main_page.add_item_to_cart("Sauce Labs Backpack")
-    main_page.click_on_shopping_cart_link()
-    cart_page.check_cart_item(cart_item_data, 0)
+    @allure.story("Добавление товара")
+    @allure.title("Добавление в корзину товара {product.name}")
+    @allure.description("Добавленный из каталога товар появляется в корзине "
+                        "с теми же названием, описанием и ценой")
+    @allure.severity(allure.severity_level.BLOCKER)
+    @pytest.mark.smoke
+    @pytest.mark.parametrize("product", [
+        Products.BACKPACK,
+        Products.BIKE_LIGHT,
+        Products.ONESIE,
+    ], ids=attrgetter("name"))
+    def test_add_product_to_cart(self, main_page: MainPage, product: Product):
+        main_page = main_page.add_item_to_cart(product.name)
+
+        assert main_page.get_cart_badge_count() == 1, \
+            "Счетчик корзины не равен 1"
+
+        cart_page = main_page.open_cart()
+
+        assert cart_page.get_items() == [product], \
+            "Товар в корзине не соответствует добавленному"
+
+    @allure.story("Удаление товара")
+    @allure.title("Удаление товара на странице корзины")
+    @allure.description("Удалённый товар пропадает из корзины, остальные "
+                        "товары остаются, счетчик уменьшается")
+    @allure.severity(allure.severity_level.CRITICAL)
+    @pytest.mark.regression
+    def test_remove_product_in_cart(self, main_page: MainPage,
+                                    cart_steps: CartSteps):
+        cart_page = (cart_steps
+                     .open_cart_with([Products.BACKPACK, Products.BIKE_LIGHT])
+                     .remove_item(Products.BACKPACK.name))
+
+        assert cart_page.get_items() == [Products.BIKE_LIGHT], \
+            "После удаления в корзине неверный набор товаров"
+        assert cart_page.get_cart_badge_count() == 1, \
+            "Счетчик корзины не уменьшился после удаления товара"
