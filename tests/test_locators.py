@@ -2,21 +2,18 @@ import allure
 import pytest
 from selenium.webdriver.common.by import By
 
+from data.test_data import Users
 from pages.login_page import LoginPage
 
 
+@allure.epic("SauceDemo")
+@allure.feature("Локаторы")
 @allure.title("Тестирование локаторов")
 @allure.description("Тестирование локаторов")
 @pytest.mark.smoke
 def test_locators(browser):
-    login_page = LoginPage(browser)
-    login_page.open("https://www.saucedemo.com/")
-    login_page.login("standard_user", "secret_sauce")
-    login_page.wait_until_document_loaded()
+    LoginPage(browser).open().login_as(Users.STANDARD)
 
-    # =========================================================================
-    # Основные локаторы (By)
-    # =========================================================================
     with allure.step("Поиск с помощью основных локаторов"):
         browser.find_element(By.ID, "item_4_img_link")
         browser.find_element(By.NAME, "add-to-cart-sauce-labs-fleece-jacket")
@@ -25,9 +22,6 @@ def test_locators(browser):
         browser.find_element(By.LINK_TEXT, "Sauce Labs Bolt T-Shirt")
         browser.find_element(By.PARTIAL_LINK_TEXT, " Labs Bolt")
 
-    # =========================================================================
-    # Локаторы XPath
-    # =========================================================================
     with allure.step("Поиск с помощью XPath"):
         browser.find_element(By.XPATH, "//a[@id='logout_sidebar_link']")
 
@@ -51,9 +45,6 @@ def test_locators(browser):
 
         browser.find_element(By.XPATH, "//a[text()='Logout']/preceding::a")
 
-    # =========================================================================
-    # CSS-селекторы
-    # =========================================================================
     with allure.step("Поиск с помощью CSS-селекторов"):
         browser.find_element(By.CSS_SELECTOR, ".page_wrapper")
 
